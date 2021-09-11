@@ -92,6 +92,7 @@ class Rect {
       if (ymin() > ymax()) std::swap(ymin(), ymax());
     }
     Rect(const Point& ll, const Point& ur) : _ll(ll), _ur(ur) { fix(); }
+    Rect(const Rect& r) : _ll(r._ll), _ur(r._ur) {}
     Rect(const int x1 = INT_MAX, const int y1 = INT_MAX, const int x2 = -INT_MAX, const int y2 = -INT_MAX) : _ll(x1, y1), _ur(x2, y2)
     {
       if (x1 != INT_MAX) fix();
@@ -236,7 +237,7 @@ struct PlInfo {
 };
 
 typedef map<const pair<string, unsigned>, const PlInfo> PlMap;
-typedef map<string, const geom::Rect> NetBBox;
+typedef map<string, geom::Rect> NetBBox;
 struct DesignInfo {
   PlMap _plmap;
   NetBBox _netBBox;
