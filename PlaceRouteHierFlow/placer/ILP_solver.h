@@ -22,7 +22,6 @@
 #include "SeqPair.h"
 #include "design.h"
 #include "lp_lib.h"
-#include "spdlog/spdlog.h"
 
 using std::cerr;
 using std::cin;
@@ -62,6 +61,7 @@ class ILP_solver {
   bool RemoveAllTaps(design& mydesign, SeqPair& curr_sp, PnRDB::Drc_info& drcInfo);
   int CompactPlacement(design& mydesign, SeqPair& curr_sp, PnRDB::Drc_info& drcInfo);
   int IncrementalCompactPlacement(design& mydesign, SeqPair& curr_sp, PnRDB::Drc_info& drcInfo);
+  double GenerateValidSolution_select(design& mydesign, SeqPair& curr_sp, PnRDB::Drc_info& drcInfo);
   double CalculateCost(design& mydesign, SeqPair& curr_sp);
   void WritePlacement(design& caseNL, SeqPair& curr_sp, string outfile);
   void PlotPlacement(design& caseNL, SeqPair& curr_sp, string outfile);
