@@ -2327,3 +2327,82 @@ double design::GetMaxBlockHPWLSum()
   }
   return maxBlockHPWLSum;
 }
+
+size_t design::getSeqIndex(const vector<int>& seq)
+{
+  size_t ind = 0;
+  if (seq.size()  <= 12 && seq.size() <= _factorial.size()) {
+    for (unsigned i = 0; i < seq.size() - 1; ++i) {
+      unsigned count = 0;
+      for (unsigned j = i + 1; j < seq.size(); ++j)
+        if (seq[i] > seq[j]) {
+          ++count;
+		}
+      if (count > 0) ind += _factorial[seq.size() - i - 1] * count;
+    }
+  } else {
+    auto it = _seqPairHash.find(seq);
+    if (it != _seqPairHash.end()) ind = it->second;
+    else {
+      auto sz = _seqPairHash.size();
+      _seqPairHash.insert(std::make_pair(seq, sz));
+      ind = sz;
+    }
+  }
+  return ind;
+}
+
+size_t design::getSeqIndex(const vector<int>& seq) const
+{
+  size_t ind = 0;
+  if (seq.size()  <= 12 && seq.size() <= _factorial.size()) {
+    for (unsigned i = 0; i < seq.size() - 1; ++i) {
+      unsigned count = 0;
+      for (unsigned j = i + 1; j < seq.size(); ++j)
+        if (seq[i] > seq[j]) {
+          ++count;
+		}
+      if (count > 0) ind += _factorial[seq.size() - i - 1] * count;
+    }
+  } else {
+    const auto it = _seqPairHash.find(seq);
+    if (it != _seqPairHash.end()) ind = it->second;
+  }
+  return ind;
+}
+
+size_t design::getSelIndex(const vector<int>& sel)
+{
+  size_t ind = 0;
+  auto it = _selHash.find(sel);
+  if (it != _selHash.end()) ind = it->second;
+  else {
+    auto sz = _selHash.size();
+    _selHash.insert(std::make_pair(sel, sz));
+    ind = sz;
+  }
+  return ind;
+}
+
+size_t design::getSelIndex(const vector<int>& sel) const
+{
+  size_t ind = 0;
+  const auto it = _selHash.find(sel);
+  if (it != _selHash.end()) ind = it->second;
+  return ind;
+}
+
+void design::cacheSeq(const vector<int>& p, const vector<int>& n, const vector<int>& sel)
+{
+  auto pindx = getSeqIndex(p), nindx = getSeqIndex(n), sindx = getSelIndex(sel);
+  auto tpl = std::make_tuple(pindx, nindx, sindx);
+  if (_seqPairCache.find(tpl) == _seqPairCache.end()) {
+    _seqPairCache.insert(tpl);
+  }
+}
+
+bool design::isSeqInCache(const vector<int>& p, const vector<int>& n, const vector<int>& sel) const
+{
+  auto pindx = getSeqIndex(p), nindx = getSeqIndex(n), sindx = getSelIndex(sel);
+  return _seqPairCache.find(std::make_tuple(pindx, nindx, sindx)) != _seqPairCache.end();
+}

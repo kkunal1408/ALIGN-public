@@ -3,8 +3,6 @@
 #include <exception>
 
 
-static std::vector<size_t> _factorial;
-
 bool OrderedEnumerator::TopoSortUtil(vector<int>& res, map<int, bool>& visited)
 {
   if (_sequences.size() > _maxSeq) {
@@ -1162,25 +1160,9 @@ size_t factorial(const size_t& t)
 }
 
  
-size_t getIndex(const vector<int>& seq)
-{
-  size_t ind = 0;
-  if (seq.size()  <= 12 && seq.size() <= _factorial.size()) {
-    for (unsigned i = 0; i < seq.size() - 1; ++i) {
-      unsigned count = 0;
-      for (unsigned j = i + 1; j < seq.size(); ++j)
-        if (seq[i] > seq[j]) {
-          ++count;
-		}
-      if (count > 0) ind += _factorial[seq.size() - i - 1] * count;
-    }
-  }
-  return ind;
-}
-
-std::string SeqPair::getLexIndex() const {
-  std::string str{std::to_string(getIndex(posPair)) +
-    " " + std::to_string(getIndex(negPair)) + " {"};
+std::string SeqPair::getLexIndex(design& des) const {
+  std::string str{std::to_string(des.getSeqIndex(posPair)) +
+    " " + std::to_string(des.getSeqIndex(negPair)) + " {"};
   for (auto& i : selected) {
     str += (std::to_string(i) + " ");
   }
@@ -1208,13 +1190,13 @@ void SeqPair::PerturbationNew(design& caseNL) {
     selected = _seqPairEnum->Selected();
     _seqPairEnum->Permute();
   } else {
-	if (_factorial.size() < posPair.size()) {
-		if (posPair.size() <= 12) {
-			for (auto i = _factorial.size(); i < posPair.size(); ++i) {
-				_factorial.push_back(factorial(i));
-			}
-		}
-	}
+    if (caseNL._factorial.size() < posPair.size()) {
+      if (posPair.size() <= 12) {
+        for (auto i = caseNL._factorial.size(); i < posPair.size(); ++i) {
+          caseNL._factorial.push_back(factorial(i));
+        }
+      }
+    }
     bool mark=false;
     std::set<int> pool;
     // 0:ChangeSelectedBlock

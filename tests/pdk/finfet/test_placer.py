@@ -16,7 +16,6 @@ except BaseException:
 cleanup = False
 
 
-@pytest.mark.skip
 def test_place_cmp_1():
     """ original comparator. Run this test with -v and -s"""
     name = f'ckt_{get_test_id()}'

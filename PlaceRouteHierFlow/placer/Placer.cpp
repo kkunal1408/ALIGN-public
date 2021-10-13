@@ -528,6 +528,7 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
   double curr_cost = 0;
   int trial_count = 0;
   int max_trial_count = 10000;
+  int max_trial_cache_count = 10000;
 
   unsigned int seed = 0;
   if (hyper.SEED > 0) {
@@ -540,21 +541,27 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
     curr_cost = curr_sol.GenerateValidSolution_select(designData, curr_sp, drcInfo);
   else
     curr_cost = curr_sol.GenerateValidSolution(designData, curr_sp, drcInfo);
+  curr_sp.cacheSeq(designData);
   // curr_cost negative means infeasible (do not satisfy placement constraints)
   // Only positive curr_cost value is accepted.
-  if (designData._debugofs) designData._debugofs << T << ' ' << curr_sp.getLexIndex()  << ' ' << curr_cost << '\n';
+  if (designData._debugofs) designData._debugofs << T << ' ' << curr_sp.getLexIndex(designData)  << ' ' << curr_cost << '\n';
+  int trial_cached = 0;
   while (curr_cost < 0) {
     if (++trial_count > max_trial_count) {
       logger->error("Couldn't generate a feasible solution even after {0} perturbations.", max_trial_count);
       curr_cost = __DBL_MAX__;
       break;
     }
-    curr_sp.PerturbationNew(designData);
+    while (++trial_cached < max_trial_cache_count) {
+      curr_sp.PerturbationNew(designData);
+      if (!curr_sp.isSeqInCache(designData)) break;
+    }
+    curr_sp.cacheSeq(designData);
     if(select_in_ILP)
       curr_cost = curr_sol.GenerateValidSolution_select(designData, curr_sp, drcInfo);
     else
       curr_cost = curr_sol.GenerateValidSolution(designData, curr_sp, drcInfo);
-    if (designData._debugofs) designData._debugofs << T << ' ' << curr_sp.getLexIndex()  << ' ' << curr_cost << '\n';
+    if (designData._debugofs) designData._debugofs << T << ' ' << curr_sp.getLexIndex(designData)  << ' ' << curr_cost << '\n';
   }
   if (0 < trial_count && trial_count <= max_trial_count) {
     logger->info("Required {0} perturbations to generate a feasible solution.", trial_count);
@@ -650,15 +657,20 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
       SeqPair trial_sp(curr_sp);
       // cout<<"before per"<<endl; trial_sp.PrintSeqPair();
       // SY: PerturbationNew honors order and symmetry. What could make the trial_sp infeasible? Aspect ratio, Align?
-      trial_sp.PerturbationNew(designData);
+      trial_cached = 0;
+      while (++trial_cached < max_trial_cache_count) {
+        trial_sp.PerturbationNew(designData);
+        if (!curr_sp.isSeqInCache(designData)) break;
+      }
       // cout<<"after per"<<endl; trial_sp.PrintSeqPair();
       ILP_solver trial_sol(designData);
-      if (designData._debugofs) designData._debugofs << T << ' ' << trial_sp.getLexIndex()  << ' ';
+      if (designData._debugofs) designData._debugofs << T << ' ' << trial_sp.getLexIndex(designData)  << ' ';
       double trial_cost = 0;
       if (select_in_ILP)
         trial_cost = trial_sol.GenerateValidSolution_select(designData, trial_sp, drcInfo);
       else
         trial_cost = trial_sol.GenerateValidSolution(designData, trial_sp, drcInfo);
+      trial_sp.cacheSeq(designData);
       total_candidates += 1;
       if (designData._debugofs) designData._debugofs << trial_cost << '\n';
       if (trial_cost >= 0) {
@@ -666,11 +678,14 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
         bool Smark = false;///trial_sp.Enumerate();
         //Smark = false;
         delta_cost = trial_cost - curr_cost;
+        double pr(0.), expr(0.);
         if (delta_cost < 0) {
           Smark = true;
           logger->debug("sa__accept_better T={0} delta_cost={1} ", T, delta_cost);
         } else {
           double r = (double)rand() / RAND_MAX;
+          pr = r;
+          expr = exp(-1. * delta_cost / T);
           if (r < exp((-1.0 * delta_cost) / T)) {
             Smark = true;
             logger->debug("sa__climbing_up T={0} delta_cost={1}", T, delta_cost);
@@ -681,7 +696,7 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
           curr_sp = trial_sp;
           curr_sol = trial_sol;
           curr_sol.cost = curr_cost;
-          if (designData._debugofs) designData._debugofs << "accepted : " << T << ' ' << curr_cost << '\n';
+          if (designData._debugofs) designData._debugofs << "accepted : " << T << ' ' << pr << ' ' << expr << ' ' << curr_cost << '\n';
         }
       } else {
         total_candidates_infeasible += 1;
