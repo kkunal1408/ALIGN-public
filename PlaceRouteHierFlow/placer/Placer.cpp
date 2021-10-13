@@ -528,6 +528,14 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
   double curr_cost = 0;
   int trial_count = 0;
   int max_trial_count = 10000;
+
+  unsigned int seed = 0;
+  if (hyper.SEED > 0) {
+    seed = hyper.SEED;
+    srand(seed);
+    logger->debug("Random number generator seed={0}", seed);
+  }
+
   if(select_in_ILP)
     curr_cost = curr_sol.GenerateValidSolution_select(designData, curr_sp, drcInfo);
   else
@@ -555,10 +563,10 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
   oData[curr_cost] = std::make_pair(curr_sp, curr_sol);
   ReshapeSeqPairMap(oData, nodeSize);
   //cout << "Placer-Info: initial cost = " << curr_cost << endl;
-
   //cout << "Placer-Info: status ";
   //cout.flush();
-  // Aimulate annealing
+  // Simulated annealing
+  double T = hyper.T_INT;
   double delta_cost;
   int update_index = 0;
   int T_index = 0;
@@ -574,6 +582,7 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
     srand(0);
     logger->debug("Random number generator seed={0}", seed);
   }
+  logger->debug("sa__cost name={0} t_index={1} effort={2} cost={3}", designData.name, T_index, 0, curr_cost);
   while (T > hyper.T_MIN) {
     int i = 1;
     int MAX_Iter = 1;
@@ -675,14 +684,10 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
           }
         }
         if (Smark) {
-          //std::cout << "cost: " << trial_cost << std::endl;
           curr_cost = trial_cost;
           curr_sp = trial_sp;
           curr_sol = trial_sol;
-          // if(update_index>updateThrd) {
-          //std::cout << "Insert\n";
           curr_sol.cost = curr_cost;
-          //}
           if (designData._debugofs) designData._debugofs << "accepted : " << T << ' ' << curr_cost << '\n';
         }
       } else {
@@ -694,17 +699,9 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
 #endif
 
       i++;
+      logger->debug("sa__cost name={0} t_index={1} effort={2} cost={3}", designData.name, T_index, i, curr_cost);
+
       update_index++;
-      // cout<<update_index<<endl;
-      /**
-      if(update_index==updateThrd){
-        curr_sol.Update_parameters(designData, curr_sp);
-        curr_cost = curr_sol.CalculateCost(designData, curr_sp);
-        std::cout<<"updated cost: "<<curr_cost<<std::endl;
-        oData[curr_cost]=curr_sp;
-        ReshapeSeqPairMap(oData, nodeSize);
-      }
-      **/
       if (trial_sp.EnumExhausted()) {
         logger->info("Exhausted all permutations of sequence pairs");
         exhausted = true;

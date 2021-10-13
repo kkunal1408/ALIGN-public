@@ -1256,7 +1256,6 @@ void SeqPair::PerturbationNew(design& caseNL) {
   }
   KeepOrdering(caseNL);
   SameSelected(caseNL);
-//if (caseNL._debugofs.is_open()) caseNL._debugofs << "seqPair index : " << getIndex(posPair) << ' ' << getIndex(negPair) << '\n';
 
   // std::string pos("{ "), neg("{ "), sel("{ ");
   // for (auto& it : posPair) pos += (std::to_string(it) + " ");
