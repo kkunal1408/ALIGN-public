@@ -270,6 +270,8 @@ class design
   size_t getSelIndex(const vector<int>& sel);
   size_t getSelIndex(const vector<int>& sel) const;
 
+  size_t getCacheSize() const { return _seqPairCache.size(); }
+
   void cacheSeq(const vector<int>& p, const vector<int>& n, const vector<int>& sel);
   bool isSeqInCache(const vector<int>& p, const vector<int>& n, const vector<int>& sel) const;
 };

@@ -528,7 +528,7 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
   double curr_cost = 0;
   int trial_count = 0;
   int max_trial_count = 10000;
-  int max_trial_cache_count = 10000;
+  int max_trial_cache_count = 10;
 
   unsigned int seed = 0;
   if (hyper.SEED > 0) {
@@ -671,6 +671,7 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
       else
         trial_cost = trial_sol.GenerateValidSolution(designData, trial_sp, drcInfo);
       trial_sp.cacheSeq(designData);
+      logger->info("{0} {1}", T, designData.getCacheSize());
       total_candidates += 1;
       if (designData._debugofs) designData._debugofs << trial_cost << '\n';
       if (trial_cost >= 0) {
