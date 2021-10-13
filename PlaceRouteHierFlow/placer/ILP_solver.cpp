@@ -1586,6 +1586,8 @@ double ILP_solver::CalculateCost(design& mydesign, SeqPair& curr_sp) {
   if (constraint_penalty > 0) {
   cost += log(constraint_penalty);
   }
+  if (mydesign._debugofs) mydesign._debugofs << area_norm << ' ' << HPWL_norm << ' ' << area << ' ' << HPWL_extend << ' ' << constraint_penalty << ' ';
+
   return cost;
 }
 

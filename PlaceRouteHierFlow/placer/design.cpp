@@ -346,6 +346,9 @@ design::design(PnRDB::hierNode& node) {
   double averageWL=0;
   double macroThreshold=0.5; // threshold to filter out small blocks
   name = node.name;
+  if (getenv("ALIGN_DEBUG_SEQ_PAIR") != nullptr && std::atoi(getenv("ALIGN_DEBUG_SEQ_PAIR"))) {
+    _debugofs.open(name + ".placer_dbg.data");
+  }
   // Add blocks
   for(vector<PnRDB::blockComplex>::iterator it=node.Blocks.begin(); it!=node.Blocks.end(); ++it) {
     this->Blocks.resize(this->Blocks.size()+1);
@@ -543,7 +546,7 @@ design::design(PnRDB::hierNode& node) {
   for (auto order: node.Ordering_Constraints) {
     for (unsigned int i = 0; i < order.first.size() - 1;i++){
       Ordering_Constraints.push_back(make_pair(make_pair(order.first[i], order.first[i+1]), order.second == PnRDB::H ? placerDB::H : placerDB::V));
-      if(Blocks[order.first[i]][0].counterpart!=-1 && Blocks[order.first[i+1]][0].counterpart!=-1)
+      if(Blocks[order.first[i]][0].counterpart!=-1 && Blocks[order.first[i+1]][0].counterpart!=-1 && Blocks[order.first[i+1]][0].counterpart!=order.first[i])
         Ordering_Constraints.push_back(make_pair(make_pair(Blocks[order.first[i]][0].counterpart, Blocks[order.first[i + 1]][0].counterpart),
                                                  order.second == PnRDB::H ? placerDB::H : placerDB::V));
     }

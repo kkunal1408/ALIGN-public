@@ -520,6 +520,7 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
 
   auto logger = spdlog::default_logger()->clone("placer.Placer.PlacementCoreAspectRatio_ILP");
 
+  double T = hyper.T_INT;
   // Mode 0: graph bias; Mode 1: graph bias + net margin; Others: no bias/margin
   // cout<<"PlacementCore\n";
   std::map<double, std::pair<SeqPair, ILP_solver>> oData;
@@ -533,6 +534,7 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
     curr_cost = curr_sol.GenerateValidSolution(designData, curr_sp, drcInfo);
   // curr_cost negative means infeasible (do not satisfy placement constraints)
   // Only positive curr_cost value is accepted.
+  if (designData._debugofs) designData._debugofs << T << ' ' << curr_sp.getLexIndex()  << ' ' << curr_cost << '\n';
   while (curr_cost < 0) {
     if (++trial_count > max_trial_count) {
       logger->error("Couldn't generate a feasible solution even after {0} perturbations.", max_trial_count);
@@ -544,6 +546,7 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
       curr_cost = curr_sol.GenerateValidSolution_select(designData, curr_sp, drcInfo);
     else
       curr_cost = curr_sol.GenerateValidSolution(designData, curr_sp, drcInfo);
+    if (designData._debugofs) designData._debugofs << T << ' ' << curr_sp.getLexIndex()  << ' ' << curr_cost << '\n';
   }
   if (0 < trial_count && trial_count <= max_trial_count) {
     logger->info("Required {0} perturbations to generate a feasible solution.", trial_count);
@@ -556,7 +559,6 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
   //cout << "Placer-Info: status ";
   //cout.flush();
   // Aimulate annealing
-  double T = hyper.T_INT;
   double delta_cost;
   int update_index = 0;
   int T_index = 0;
@@ -649,12 +651,14 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
       trial_sp.PerturbationNew(designData);
       // cout<<"after per"<<endl; trial_sp.PrintSeqPair();
       ILP_solver trial_sol(designData);
+      if (designData._debugofs) designData._debugofs << T << ' ' << trial_sp.getLexIndex()  << ' ';
       double trial_cost = 0;
       if (select_in_ILP)
         trial_cost = trial_sol.GenerateValidSolution_select(designData, trial_sp, drcInfo);
       else
         trial_cost = trial_sol.GenerateValidSolution(designData, trial_sp, drcInfo);
       total_candidates += 1;
+      if (designData._debugofs) designData._debugofs << trial_cost << '\n';
       if (trial_cost >= 0) {
         oData[trial_cost] = std::make_pair(trial_sp, trial_sol);
         bool Smark = false;///trial_sp.Enumerate();
@@ -679,6 +683,7 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
           //std::cout << "Insert\n";
           curr_sol.cost = curr_cost;
           //}
+          if (designData._debugofs) designData._debugofs << "accepted : " << T << ' ' << curr_cost << '\n';
         }
       } else {
         total_candidates_infeasible += 1;

@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <climits>
 #include <utility> // pair, make_pair
+#include <fstream>
 #include "Pdatatype.h"
 #include "../PnRDB/readfile.h"
 #include "../PnRDB/datatype.h"
@@ -256,6 +257,11 @@ class design
 
     double GetMaxBlockAreaSum();
     double GetMaxBlockHPWLSum();
+	ofstream _debugofs;
+	~design()
+	{
+		if (_debugofs.is_open()) _debugofs.close();
+	}
 };
 
 #endif

@@ -133,6 +133,8 @@ class SeqPair
     void KeepOrdering(design& caseNL);
     void CompactSeq();
 
+    std::string getLexIndex() const;
+
     //vector<int> GetFlip(const bool hor) const;
 };
 
