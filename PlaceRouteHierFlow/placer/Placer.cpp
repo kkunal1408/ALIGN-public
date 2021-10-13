@@ -566,7 +566,6 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
   //cout << "Placer-Info: status ";
   //cout.flush();
   // Simulated annealing
-  double T = hyper.T_INT;
   double delta_cost;
   int update_index = 0;
   int T_index = 0;
@@ -576,12 +575,6 @@ std::map<double, std::pair<SeqPair, ILP_solver>> Placer::PlacementCoreAspectRati
   bool exhausted(false);
   int total_candidates = 0;
   int total_candidates_infeasible = 0;
-  unsigned int seed = 0;
-  if (hyper.SEED > 0) {
-    seed = hyper.SEED;
-    srand(0);
-    logger->debug("Random number generator seed={0}", seed);
-  }
   logger->debug("sa__cost name={0} t_index={1} effort={2} cost={3}", designData.name, T_index, 0, curr_cost);
   while (T > hyper.T_MIN) {
     int i = 1;
