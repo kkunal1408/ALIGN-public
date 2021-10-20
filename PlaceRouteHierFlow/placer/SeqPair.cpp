@@ -74,14 +74,6 @@ OrderedEnumerator::OrderedEnumerator(const vector<int>& seq, const vector<pair<p
   _indegree.clear();
   _adj.clear();
   logger->debug("num sequences {0} {1} {2}", _sequences.size(), constraints.size(), (_valid ? 1 : 0));
-  /*string str;
-  for (auto& it : _sequences) {
-    str.clear();
-    for (auto& r : it) {
-      str += (std::to_string(r) + " ");
-    }
-    logger->info("seq : {0} {1}", pos, str);
-  }*/
 }
 
 bool OrderedEnumerator::NextPermutation(vector<int>& seq)
@@ -126,10 +118,6 @@ SeqPairEnumerator::SeqPairEnumerator(const vector<int>& pair, design& casenl, co
     _maxSize = std::max(_maxSize, s);
     _maxSelected.push_back(s);
   }
-  //_hflip = 0;
-  //_vflip = 0;
-  //_maxFlip = (1 << casenl.GetSizeofBlocks());
-  //logger->info("maxflip : {0}", _maxFlip);
 }
 
 const bool SeqPairEnumerator::IncrementSelected()
@@ -153,33 +141,10 @@ const bool SeqPairEnumerator::IncrementSelected()
   return rem ? false : true;
 }
 
-/*vector<int> SeqPairEnumerator::GetFlip(const bool hor) const
-{
-  vector<int> flipVec;
-  flipVec.reserve(_maxSelected.size());
-  const size_t flip = hor ? _hflip : _vflip;
-  for (unsigned i = 1; i < _maxFlip; i = (i << 1)) {
-    flipVec.push_back((flip & i) ? 1 : 0);
-  }
-  return flipVec;
-}*/
-
-
-/*bool SeqPairEnumerator::EnumFlip() {
-  if (++_hflip >= _maxFlip) {
-    _hflip = 0;
-    if (++_vflip >= _maxFlip) {
-      _vflip = 0;
-      return false;
-    }
-  }
-  return true;
-}*/
 
 void SeqPairEnumerator::Permute()
 {
   auto logger = spdlog::default_logger()->clone("placer.SeqPairEnumerator.Permute");
-  //if (!EnumFlip()) 
   if (!IncrementSelected()) {
     if (_enumIndex.second >= _maxEnum - 1) {
       _enumIndex.second = 0;
@@ -198,7 +163,6 @@ void SeqPairEnumerator::Permute()
     }
   }
   if (_enumIndex.first >= _maxEnum) _exhausted = true;
-  //logger->info("enum index : {0} {1}", _enumIndex.first, _enumIndex.second);
 }
 
 SeqPair::SeqPair() {
@@ -208,28 +172,6 @@ SeqPair::SeqPair() {
   this->symAxis.clear();
   this->selected.clear();
 }
-
-//SeqPair::SeqPair(int blockSize) {
-//// For testing
-//  for(int i=0;i<blockSize;i++) {
-//    posPair.push_back(i);
-//    negPair.push_back(i);
-//    orient.push_back(placerDB::N);
-//  }
-//}
-
-//SeqPair::SeqPair(string pos, string neg) {
-//// For testing
-//  vector<string> temp1=split_by_spaces(pos);
-//  vector<string> temp2=split_by_spaces(neg);
-//  for(vector<string>::iterator it=temp1.begin(); it!=temp1.end()-1; ++it) {
-//    posPair.push_back(stoi(*it));
-//  }
-//  for(vector<string>::iterator it=temp2.begin(); it!=temp2.end()-1; ++it) {
-//    negPair.push_back(stoi(*it));
-//  }
-//  for(int i=0;i<(int)posPair.size();++i) {orient.push_back(placerDB::N);}
-//}
 
 SeqPair::SeqPair(const SeqPair& sp) {
   this->posPair=sp.posPair;
@@ -775,27 +717,25 @@ void SeqPair::PrintSeqPair() {
   auto logger = spdlog::default_logger()->clone("placer.SeqPair.PrintSeqPair");
 
   logger->debug("=== Sequence Pair ===");
-  logger->debug("Positive pair: ");
-  for(int i=0;i<(int)posPair.size();++i) {
-    logger->debug("{0} ",posPair.at(i));
-  }
-  logger->debug("Negative pair: ");
-  for(int i=0;i<(int)negPair.size();++i) {
-    logger->debug("{0}",negPair.at(i));
-  }
-  logger->debug("Orientation: ");
-  for(int i=0;i<(int)orient.size();++i) {
-    logger->debug("{0}",orient.at(i));
-  }
-  logger->debug("Symmetry axis: ");
-  for(int i=0;i<(int)symAxis.size();++i) {
-    if(symAxis.at(i)==0) {logger->debug("H ");
-    } else {logger->debug("V ");}
-  }
-  logger->debug("Selected: ");
-  for(int i=0;i<(int)selected.size();++i) {
-    logger->debug("{0}",selected.at(i));
-  }
+  std::string tmpstr;
+  for(const auto& it : posPair) tmpstr += (std::to_string(it) + " ");
+  logger->debug("Positive pair: {0}", tmpstr);
+
+  tmpstr = "";
+  for(const auto& it : negPair) tmpstr += (std::to_string(it) + " ");
+  logger->debug("Negative pair: {0}", tmpstr);
+
+  tmpstr = "";
+  for(const auto& it : orient) tmpstr += (std::to_string(it) + " ");
+  logger->debug("Orientation: {0}", tmpstr);
+
+  tmpstr = "";
+  for(const auto& it : symAxis) tmpstr += (it ? "H " : "V ");
+  logger->debug("Symmetry axis: {0}", tmpstr);
+
+  tmpstr = "";
+  for(const auto& it : selected) tmpstr += (std::to_string(it) + " ");
+  logger->debug("Selected: {0}", tmpstr);
   //cout<<endl;
 }
 
@@ -1159,147 +1099,67 @@ std::string SeqPair::getLexIndex(design& des) const {
 }
 
 void SeqPair::PerturbationNew(design& caseNL) {
+
   /* initialize random seed: */
   //srand(time(NULL));
   //
 
-  //auto logger = spdlog::default_logger()->clone("placer.SeqPair.PerturbationNew");
-  /*if (caseNL._debugofs.is_open()) {
-    std::string pos("{ "), neg("{ "), sel("{ ");
-    for (auto& it : posPair) pos += (std::to_string(it) + " ");
-    for (auto& it : negPair) neg += (std::to_string(it) + " ");
-    for (auto& it : selected) sel += (std::to_string(it) + " ");
-    pos += "}";
-    neg += "}";
-    sel += "}";
-    caseNL._debugofs << "sp_before_perturbation : "<< pos << ' ' << neg << ' ' << sel << ' ' << caseNL.getSeqIndex(posPair) << ' ' << caseNL.getSeqIndex(negPair) << '\n';
-  }*/
+  auto logger = spdlog::default_logger()->clone("placer.SeqPair.PerturbationNew");
 
-  //logger->info("sp_before_perturbation {0} {1} {2}", pos, neg, sel);
+  SeqPair cpsp(*this);
+  int trial_cnt{0};
+  const int max_trial_cnt{20};
+  do {
+	  if (_seqPairEnum) {
+		  posPair = _seqPairEnum->PosPair();
+		  negPair = _seqPairEnum->NegPair();
+		  selected = _seqPairEnum->Selected();
+		  _seqPairEnum->Permute();
+	  } else {
+		  bool mark=false;
+		  std::set<int> pool;
+		  // 0:ChangeSelectedBlock
+		  // 1:MoveAsymmetricBlockposPair
+		  // 2:MoveAsymmetricBlocknegPair
+		  // 3:MoveAsymmetricBlockdoublePair
+		  // 4:ChangeAsymmetricBlockOrient
+		  // 5:SwapTwoBlocksofSameGroup
+		  // 6:SwapTwoSymmetryGroup
+		  // 7:ChangeSymmetryBlockOrient
+		  // 8:SwapMultiBlocksofSameGroup
+		  // 9:RotateSymmetryGroup
+		  if(caseNL.GetSizeofBlocks()<=1) {return;}
+		  if(caseNL.noBlock4Move>0) {pool.insert(0);}
+		  if(caseNL.noAsymBlock4Move>0) { pool.insert(1); pool.insert(2); pool.insert(3);}
+		  if(caseNL.noSymGroup4PartMove>0) {pool.insert(5); pool.insert(8); } 
+		  if(caseNL.noSymGroup4FullMove>1) {pool.insert(6);}
+		  int fail = 0;
+		  int count = 20;
+		  while(!mark && fail<count) {
+			  //std::cout<<int(pool.size())<<std::endl;
+			  int choice=rand() % int(pool.size());
+			  std::set<int>::iterator cit=pool.begin(); std::advance(cit, choice);
+			  switch(*cit) {
+				  case 0: mark=ChangeSelectedBlock(caseNL); break;
+				  case 1: mark=MoveAsymmetricBlockposPair(caseNL); break;
+				  case 2: mark=MoveAsymmetricBlocknegPair(caseNL); break;
+				  case 3: mark=MoveAsymmetricBlockdoublePair(caseNL); break;
+						  //case 4: mark=ChangeAsymmetricBlockOrient(caseNL); break;
+				  case 5: mark=SwapTwoBlocksofSameGroup(caseNL); break;
+				  case 6: mark=SwapTwoSymmetryGroup(caseNL); break;
+						  //case 7: mark=ChangeSymmetryBlockOrient(caseNL); break;
+				  case 8: mark=SwapMultiBlocksofSameGroup(caseNL); break;
+						  //case 9: mark=RotateSymmetryGroup(caseNL); break;
+				  default: mark=false;
+			  }
+			  fail++;
+		  }
+	  }
+	  KeepOrdering(caseNL);
+	  SameSelected(caseNL);
+  } while (cpsp == *this && trial_cnt++ < max_trial_cnt);
 
-  if (_seqPairEnum) {
-    posPair = _seqPairEnum->PosPair();
-    negPair = _seqPairEnum->NegPair();
-    selected = _seqPairEnum->Selected();
-    _seqPairEnum->Permute();
-  } else {
-    bool mark=false;
-    std::set<int> pool;
-    // 0:ChangeSelectedBlock
-    // 1:MoveAsymmetricBlockposPair
-    // 2:MoveAsymmetricBlocknegPair
-    // 3:MoveAsymmetricBlockdoublePair
-    // 4:ChangeAsymmetricBlockOrient
-    // 5:SwapTwoBlocksofSameGroup
-    // 6:SwapTwoSymmetryGroup
-    // 7:ChangeSymmetryBlockOrient
-    // 8:SwapMultiBlocksofSameGroup
-    // 9:RotateSymmetryGroup
-    if(caseNL.GetSizeofBlocks()<=1) {return;}
-    if(caseNL.noBlock4Move>0) {pool.insert(0);}
-    if(caseNL.noAsymBlock4Move>0) { pool.insert(1); pool.insert(2); pool.insert(3);}
-    if(caseNL.noSymGroup4PartMove>0) {pool.insert(5); pool.insert(8); } 
-    if(caseNL.noSymGroup4FullMove>1) {pool.insert(6);}
-    int fail = 0;
-    int count = 20;
-    while(!mark && fail<count) {
-      //std::cout<<int(pool.size())<<std::endl;
-      int choice=rand() % int(pool.size());
-      std::set<int>::iterator cit=pool.begin(); std::advance(cit, choice);
-      switch(*cit) {
-        case 0: mark=ChangeSelectedBlock(caseNL); break;
-        case 1: mark=MoveAsymmetricBlockposPair(caseNL); break;
-        case 2: mark=MoveAsymmetricBlocknegPair(caseNL); break;
-        case 3: mark=MoveAsymmetricBlockdoublePair(caseNL); break;
-                //case 4: mark=ChangeAsymmetricBlockOrient(caseNL); break;
-        case 5: mark=SwapTwoBlocksofSameGroup(caseNL); break;
-        case 6: mark=SwapTwoSymmetryGroup(caseNL); break;
-                //case 7: mark=ChangeSymmetryBlockOrient(caseNL); break;
-        case 8: mark=SwapMultiBlocksofSameGroup(caseNL); break;
-                //case 9: mark=RotateSymmetryGroup(caseNL); break;
-        default: mark=false;
-      }
-      fail++;
-    }
-  }
-  KeepOrdering(caseNL);
-  SameSelected(caseNL);
 
-  /*if (caseNL._debugofs.is_open()) {
-    std::string pos("{ "), neg("{ "), sel("{ ");
-    for (auto& it : posPair) pos += (std::to_string(it) + " ");
-    for (auto& it : negPair) neg += (std::to_string(it) + " ");
-    for (auto& it : selected) sel += (std::to_string(it) + " ");
-    pos += "}";
-    neg += "}";
-    sel += "}";
-    //logger->info("sp_after_perturbation {0} {1} {2}", pos, neg, sel);
-    caseNL._debugofs << "sp_after_perturbation : "<< pos << ' ' << neg << ' ' << sel << ' ' << caseNL.getSeqIndex(posPair) << ' ' << caseNL.getSeqIndex(negPair) << '\n';
-  }*/
-}
-
-void SeqPair::Perturbation(design& caseNL) {
-  /* initialize random seed: */
-  //srand(time(NULL));
-  int choice;
-  bool mark=false;
-  //cout<<"Perturbation?"<<endl;
-  while(!mark) {
-    if(!caseNL.designHasAsymBlock() && caseNL.GetSymGroupSize()==1 ) {
-      choice=rand() % 3;
-      //cout<<"Perturbation choice "<<choice<<endl;
-      switch(choice) {
-        case 0: mark=SwapTwoBlocksofSameGroup(caseNL); break;
-        case 1: mark=ChangeSymmetryBlockOrient(caseNL); break;
-        case 2: mark=SwapMultiBlocksofSameGroup(caseNL); break;
-        //case 2: mark=RotateSymmetryGroup(caseNL); break;
-        default: mark=SwapTwoBlocksofSameGroup(caseNL);
-      }
-    } else if(!caseNL.designHasAsymBlock()) {
-      choice=rand() % 3;
-      //cout<<"Perturbation choice "<<choice<<endl;
-      switch(choice) {
-        case 0: mark=SwapTwoBlocksofSameGroup(caseNL); break;
-        case 1: mark=SwapTwoSymmetryGroup(caseNL); break;
-        case 2: mark=ChangeSymmetryBlockOrient(caseNL); break;
-        //case 3: mark=RotateSymmetryGroup(caseNL); break;
-        default: mark=SwapTwoBlocksofSameGroup(caseNL);
-      }
-    } else if (!caseNL.designHasSymGroup()) {
-      choice=rand() % 4;
-      //cout<<"Perturbation choice "<<choice<<endl;
-      switch(choice) {
-        case 0: mark=MoveAsymmetricBlockposPair(caseNL); break;
-        case 1: mark=MoveAsymmetricBlocknegPair(caseNL); break;
-        case 2: mark=MoveAsymmetricBlockdoublePair(caseNL); break;
-        case 3: mark=ChangeAsymmetricBlockOrient(caseNL); break;
-        default: mark=MoveAsymmetricBlockdoublePair(caseNL);
-      }
-    } else {
-      choice=rand() % 7;
-      //cout<<"Perturbation choice "<<choice<<endl;
-      switch(choice) {
-        case 0: mark=MoveAsymmetricBlockposPair(caseNL); break;
-        case 1: mark=MoveAsymmetricBlocknegPair(caseNL); break;
-        case 2: mark=MoveAsymmetricBlockdoublePair(caseNL); break;
-        case 3: mark=SwapTwoBlocksofSameGroup(caseNL); break;
-        case 4: mark=SwapTwoSymmetryGroup(caseNL); break;
-        case 5: mark=ChangeAsymmetricBlockOrient(caseNL); break;
-        case 6: mark=ChangeSymmetryBlockOrient(caseNL); break;
-        //case 7: mark=RotateSymmetryGroup(caseNL); break;
-        default: mark=MoveAsymmetricBlockdoublePair(caseNL);
-      }
-    }
-  }
-  //int sgsize=caseNL.GetSizeofSBlocks();
-  //if(sgsize==0) {
-  //  // no symmetry group
-  //} else if(sgsize==1) {
-  //  // one symmetry group
-  //} else if(sgsize>1) {
-  //  // more than one symmetry group
-  //} else {
-  //}
 }
 
 void SeqPair::TestSwap() {
@@ -1520,7 +1380,7 @@ bool SeqPair::MoveAsymmetricBlockposPair(design& caseNL) {
   } // randomly choose an asymmetric block
   if(caseNL.mixFlag && caseNL.GetMappedBlockIdx(anode)!=-1) {return false;}
   //cout<<endl<<"Move asymmetric block in pos SP"<<endl;
-  return MoveAsymmetricBlockUnit(caseNL, this->posPair, anode);
+  return MoveAsymmetricBlockUnit(caseNL, true, anode);
 }
 
 bool SeqPair::MoveAsymmetricBlocknegPair(design& caseNL) {
@@ -1533,7 +1393,7 @@ bool SeqPair::MoveAsymmetricBlocknegPair(design& caseNL) {
   } // randomly choose an asymmetric block
   if(caseNL.mixFlag && caseNL.GetMappedBlockIdx(anode)!=-1) {return false;}
   //cout<<endl<<"Move asymmetric block in neg SP"<<endl;
-  return MoveAsymmetricBlockUnit(caseNL, this->negPair, anode);
+  return MoveAsymmetricBlockUnit(caseNL, false, anode);
 }
 
 bool SeqPair::MoveAsymmetricBlockdoublePair(design& caseNL) {
@@ -1547,21 +1407,115 @@ bool SeqPair::MoveAsymmetricBlockdoublePair(design& caseNL) {
   if(caseNL.mixFlag && caseNL.GetMappedBlockIdx(anode)!=-1) {return false;}
   bool mark=true;
   //cout<<endl<<"Move asymmetric block in pos SP"<<endl;
-  mark=mark&&MoveAsymmetricBlockUnit(caseNL, this->posPair, anode);
+  mark=mark&&MoveAsymmetricBlockUnit(caseNL, true, anode);
   //cout<<"Move asymmetric block in neg SP"<<endl;
-  mark=mark&&MoveAsymmetricBlockUnit(caseNL, this->negPair, anode);
+  mark=mark&&MoveAsymmetricBlockUnit(caseNL, false, anode);
   return mark;
 }
 
-bool SeqPair::MoveAsymmetricBlockUnit(design& caseNL, vector<int>& seq, int anode) {
+std::pair<int, int> SeqPair::GetOrderValidRange(const design& des, bool pos, int anode)
+{
+  const auto& seq = pos ? posPair : negPair;
+  const int ind_max = seq.size() - 1;
+  std::pair<int, int> range(0, ind_max);
+  for (const auto& it : des.Ordering_Constraints) {
+    if (it.first.first == anode) {
+      const int bindex = std::find(seq.begin(), seq.end(), it.first.second)- seq.begin();
+      if (it.second == placerDB::V) { // vertical
+        if (pos) {
+          range.second = std::min(range.second, std::max(bindex - 1, 0));
+        } else {
+          range.first = std::max(range.first, std::min(bindex + 1, ind_max));
+        }
+      } else { // horizontal
+        range.second = std::min(range.second, std::max(bindex - 1, 0));
+      }
+    } else if (it.first.second == anode) {
+      const int bindex = std::find(seq.begin(), seq.end(), it.first.first)- seq.begin();
+      if (it.second == placerDB::V) { // vertical
+        if (pos) {
+          range.first = std::max(range.first, std::min(bindex + 1, ind_max));
+        } else {
+          range.second = std::min(range.second, std::max(bindex - 1, 0));
+        }
+      } else { // horizontal
+        range.first = std::max(range.first, std::min(bindex + 1, ind_max));
+      }
+    }
+  }
+
+  return range;
+}
+
+std::pair<int, int> SeqPair::GetAlignValidRange(const design& des, bool pos, int anode)
+{
+  const auto& seq = pos ? posPair : negPair;
+  const auto& othseq = pos ? negPair : posPair;
+  const int ind_max = seq.size() - 1;
+  const int aindexoth = GetVertexIndexinSeq(const_cast<vector<int>&>(othseq), anode);
+  std::pair<int, int> range(0, ind_max);
+  for (const auto& alignment_unit : des.Align_blocks) {
+    int found_idx{-1};
+    for (int i = 0; i < alignment_unit.blocks.size(); ++i) {
+      if (alignment_unit.blocks[i] == anode) {
+        found_idx = i;
+        break;
+      }
+    }
+    if (found_idx >= 0) {
+      if (alignment_unit.horizon == 1) {
+        for (int i = 0; i < alignment_unit.blocks.size(); ++i) {
+          if (i == found_idx) continue;
+          const int bindexoth = std::find(othseq.begin(), othseq.end(), alignment_unit.blocks[i])- othseq.begin();
+          const int bindex = std::find(seq.begin(), seq.end(), alignment_unit.blocks[i])- seq.begin();
+          if (aindexoth > bindexoth) {
+            range.first = std::max(range.first, std::min(bindex + 1, ind_max));
+          } else {
+            range.second = std::min(range.second, std::max(bindex - 1, 0));
+          }
+        }
+      } else {
+        for (int i = 0; i < alignment_unit.blocks.size(); ++i) {
+          if (i == found_idx) continue;
+          const int bindexoth = std::find(othseq.begin(), othseq.end(), alignment_unit.blocks[i])- othseq.begin();
+          const int bindex = std::find(seq.begin(), seq.end(), alignment_unit.blocks[i])- seq.begin();
+          if (aindexoth > bindexoth) {
+            range.second = std::min(range.second, std::max(bindex - 1, 0));
+          } else {
+            range.first = std::max(range.first, std::min(bindex + 1, ind_max));
+          }
+        }
+      }
+    }
+  }
+  return range;
+}
+
+std::pair<int, int> SeqPair::GetValidRange(const design& des, bool pos, int anode)
+{
+  auto p1 = GetOrderValidRange(des, pos, anode);
+  auto p2 = GetAlignValidRange(des, pos, anode);
+  return std::make_pair(std::max(p1.first, p2.first), std::min(p1.second, p2.second));
+}
+
+bool SeqPair::MoveAsymmetricBlockUnit(design& caseNL, bool pos, int anode) {
   /* initialize random seed: */
   //srand(time(NULL));
+  auto& seq = pos ? posPair : negPair;
   vector<int> newseq;
   newseq.resize(seq.size());
+  auto range = GetValidRange(caseNL, pos, anode);
+  if (range.first > range.second) return false;
+  const int delN = range.second - range.first + 1;
   int oldpos=GetVertexIndexinSeq(seq, anode); // position of anode in original seqence
-  int newpos=rand() % (int)seq.size();
+  int newpos{oldpos};
+  if (range.first == range.second && oldpos != range.first) {
+    newpos = range.first;
+  } else {
+    newpos = range.first + (rand() % delN);
+  }
   while(oldpos==newpos) {
-    newpos=rand() % (int)seq.size();
+	newpos = range.first + (rand() % delN);
   } // randomly choose a new position
   //cout<<"Aymnode-"<<anode<<" oldpos-"<<oldpos<<" newpos-"<<newpos<<endl;
 

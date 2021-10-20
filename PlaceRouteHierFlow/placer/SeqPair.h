@@ -55,8 +55,6 @@ class SeqPairEnumerator
     unsigned _exhausted : 1;
     unsigned _valid : 1;
     size_t _maxEnum;
-    //size_t _hflip, _vflip;
-    //size_t _maxFlip;
     OrderedEnumerator _posEnumerator, _negEnumerator;
   public:
     SeqPairEnumerator(const vector<int>& pair, design& casenl, const size_t maxIter);
@@ -66,8 +64,6 @@ class SeqPairEnumerator
     const vector<int>& Selected() const { return _selected; }
     const bool EnumExhausted() const { return _exhausted; }
     const bool IncrementSelected();
-    //bool EnumFlip();
-    //vector<int> GetFlip(const bool hor) const;
     bool valid() const { return _valid ? true : false; }
 };
 
@@ -83,11 +79,15 @@ class SeqPair
     std::shared_ptr<SeqPairEnumerator> _seqPairEnum;
     vector<int> FindShortSeq(design& caseNL, vector<int>& seq, int idx);
     int GetVertexIndexinSeq(vector<int>& seq, int v);
-    bool MoveAsymmetricBlockUnit(design& caseNL, vector<int>& seq, int anode);
+    bool MoveAsymmetricBlockUnit(design& caseNL, bool pos, int anode);
     vector<int> GetVerticesIndexinSeq(vector<int>& seq, vector<int>& L);
     vector<int> SwapTwoListinSeq(vector<int>& Alist, vector<int>& Blist, vector<int>& seq);
     void InsertCommonSBlock(design& originNL, design& reducedNL, int originIdx);
     void InsertNewSBlock(design& originNL, int originIdx);
+
+	std::pair<int, int> GetOrderValidRange(const design& originNL, bool pos, int anode);
+	std::pair<int, int> GetAlignValidRange(const design& originNL, bool pos, int anode);
+	std::pair<int, int> GetValidRange(const design& originNL, bool pos, int anode);
 
   public:
     SeqPair();
@@ -138,6 +138,10 @@ class SeqPair
     bool isSeqInCache(const design& des) const { return des.isSeqInCache(posPair, negPair, selected); }
 
     //vector<int> GetFlip(const bool hor) const;
+	bool operator == (const SeqPair& s1) const
+	{
+		return (posPair == s1.posPair) && (negPair == s1.negPair) && (selected == s1.selected);
+	}
 };
 
 #endif

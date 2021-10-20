@@ -216,9 +216,17 @@ def plot_sa_seq(name):
     assert init > 0
 
     cost = [math.exp(k-init) if k > 0 else -1 for k in data['cost']]
+
+    infeas_pair = list()
+    feas_pair = list()
+    for k in range(len(cost)):
+        if (cost[k] < 0):
+            infeas_pair.append([data['pos_pair'][k], data['neg_pair'][k]])
+        else:
+            feas_pair.append([data['pos_pair'][k], data['neg_pair'][k], cost[k]])
     cm = plt.cm.get_cmap('cool')
 
-    fig, ax = plt.subplots(1, 2)
+    fig, ax = plt.subplots(1, 3)
 
     if len(data['pos_pair']) == len(data['selected']):
         for i in range(len(data['pos_pair'])):
@@ -227,13 +235,20 @@ def plot_sa_seq(name):
 
     max_val = max(max(data['neg_pair']), max(data['pos_pair']))
 
-    im0 = ax[0].scatter(data['pos_pair'], data['neg_pair'], c=data['temp'], cmap=cm, marker='.')
-    im1 = ax[1].scatter(data['pos_pair'], data['neg_pair'], c=cost,         cmap=cm, marker='.')
+    im0 = ax[0].scatter(data['pos_pair'], data['neg_pair'], c=data['temp'],  cmap=cm, marker='.')
+    im1 = ax[1].scatter([feas_pair[k][0] for k in range(len(feas_pair))],
+            [feas_pair[k][1] for k in range(len(feas_pair))],
+            c=[feas_pair[k][2] for k in range(len(feas_pair))],
+            cmap=cm, marker='.')
+    im2 = ax[2].scatter([infeas_pair[k][0] for k in range(len(infeas_pair))],
+            [infeas_pair[k][1] for k in range(len(infeas_pair))],
+            marker='.')
 
     ax[0].set_title('Temperature')
     ax[1].set_title('Cost (Norm. to initial. -1 if infeasible)')
+    ax[2].set_title('Infeasible pairs')
 
-    for i in range(2):
+    for i in range(3):
         ax[i].set_ylabel('Neg pair')
         ax[i].set_xlabel('Pos pair')
         ax[i].set_xlim(-0.5, max_val+0.5)
@@ -242,5 +257,6 @@ def plot_sa_seq(name):
 
     fig.colorbar(im0, ax=ax[0])
     fig.colorbar(im1, ax=ax[1])
+    fig.colorbar(im1, ax=ax[2])
     fig.set_size_inches(14, 6)
     fig.savefig(f'{my_dir}/{name}_seqpair_scatter.png', dpi=300, pad_inches=0.001)
