@@ -2424,6 +2424,6 @@ design::~design()
 {
   auto logger = spdlog::default_logger()->clone("placer.design.design");
   logger->debug("sa__seq {0} unique_cnt={1} seq_pair_hash={2} sel_hash={3}", name, _seqPairCache.size(), _seqPairHash.size(), _selHash.size());
-  logger->debug("sa__infeasible {0} aspect_ratio={1} ilp_fail={2} placement_boundary={3} total_calls={4}", name, _infeasAspRatio, _infeasILPFail, _infeasPlBound, _totalNumCostCalc);
+  logger->debug("sa__infeasible {0} aspect_ratio={1} ilp_fail={2} sym_pair_fail={3} placement_boundary={4} total_calls={5}", name, _infeasAspRatio, _infeasILPFail, _infeasSymPair, _infeasPlBound, _totalNumCostCalc);
   //_debugofs.close();
 }

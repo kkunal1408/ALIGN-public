@@ -78,16 +78,24 @@ class SeqPair
     vector<int> selected;
     std::shared_ptr<SeqPairEnumerator> _seqPairEnum;
     vector<int> FindShortSeq(design& caseNL, vector<int>& seq, int idx);
-    int GetVertexIndexinSeq(vector<int>& seq, int v);
+    int GetVertexIndexinSeq(const vector<int>& seq, int v) const;
     bool MoveAsymmetricBlockUnit(design& caseNL, bool pos, int anode);
     vector<int> GetVerticesIndexinSeq(vector<int>& seq, vector<int>& L);
     vector<int> SwapTwoListinSeq(vector<int>& Alist, vector<int>& Blist, vector<int>& seq);
     void InsertCommonSBlock(design& originNL, design& reducedNL, int originIdx);
     void InsertNewSBlock(design& originNL, int originIdx);
 
-	std::pair<int, int> GetOrderValidRange(const design& originNL, bool pos, int anode);
-	std::pair<int, int> GetAlignValidRange(const design& originNL, bool pos, int anode);
-	std::pair<int, int> GetValidRange(const design& originNL, bool pos, int anode);
+	std::pair<int, int> GetOrderValidRange(const design& originNL, bool pos, int anode) const;
+	std::pair<int, int> GetAlignValidRange(const design& originNL, bool pos, int anode) const;
+	std::pair<int, int> GetValidRange(const design& originNL, bool pos, int anode) const;
+
+	enum class SPConstrCheck {
+		VALID = 0,
+		POS_PAIR_INVALID_RANGE,
+		NEG_PAIR_INVALID_RANGE,
+		SYM_PAIR_FAIL
+	};
+	SPConstrCheck AlignOrderSymValid(const design& originNL) const;
 
   public:
     SeqPair();
@@ -106,7 +114,7 @@ class SeqPair
     vector<int> GetAboveBlock(int blockNo);
     vector<int> GetBelowBlock(int blockNo);
     placerDB::Omark GetBlockOrient(int blockNo);
-    void PrintSeqPair();
+    void PrintSeqPair() const;
     void SameSelected(design& caseNL);
     void ChangeOrient(int blockNo, placerDB::Omark ort );
     void FlipOrient(int blockNo);

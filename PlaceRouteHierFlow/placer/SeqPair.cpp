@@ -712,7 +712,7 @@ SeqPair& SeqPair::operator=(const SeqPair& sp) {
   return *this;
 }
 
-void SeqPair::PrintSeqPair() {
+void SeqPair::PrintSeqPair() const {
 
   auto logger = spdlog::default_logger()->clone("placer.SeqPair.PrintSeqPair");
 
@@ -895,7 +895,8 @@ vector<int> SeqPair::FindShortSeq(design& caseNL, vector<int>& seq, int idx) {
   return newQ;
 }
 
-int SeqPair::GetVertexIndexinSeq(vector<int>& seq, int v) {
+int SeqPair::GetVertexIndexinSeq(const vector<int>& seq, int v) const
+{ 
   int idx=-1;
   for(int i=0;i<(int)seq.size(); ++i) {
     if(seq.at(i)==v) {idx=i; break;}
@@ -956,7 +957,7 @@ bool SeqPair::ChangeSelectedBlock(design& caseNL) {
     } // randomly choose a block
   }
   if(caseNL.Blocks.at(anode).size()<=1) {
-    logger->debug("anode size < 1");
+    if (caseNL.Blocks.at(anode).size() < 1) logger->debug("anode size < 1");
     return false;
   }
   int newsel=rand() % caseNL.Blocks.at(anode).size();
@@ -1098,6 +1099,52 @@ std::string SeqPair::getLexIndex(design& des) const {
 	" selected=" + std::to_string(des.getSelIndex(selected));
 }
 
+SeqPair::SPConstrCheck SeqPair::AlignOrderSymValid(const design& des) const
+{
+	auto logger = spdlog::default_logger()->clone("placer.SeqPair.AlignOrderValid");
+	for (const auto& it : posPair) {
+		if (it >= des.Blocks.size()) continue;
+		auto p1 = GetValidRange(des, true, it);
+		auto pos = GetVertexIndexinSeq(posPair, it);
+		if (pos < p1.first || pos > p1.second) {
+			logger->debug("pos {0}", des.Blocks[it][0].name);
+			return SPConstrCheck::POS_PAIR_INVALID_RANGE;
+		}
+	}
+	for (const auto& it : negPair) {
+		if (it >= des.Blocks.size()) continue;
+		auto p1 = GetValidRange(des, false, it);
+		auto pos = GetVertexIndexinSeq(negPair, it);
+		if (pos < p1.first || pos > p1.second) {
+			logger->debug("neg {0}", des.Blocks[it][0].name);
+			return SPConstrCheck::NEG_PAIR_INVALID_RANGE;
+		}
+	}
+
+	for (const auto& sb : des.SBlocks) {
+		for (const auto& itsympair : sb.sympair) {
+			auto posA = GetVertexIndexinSeq(posPair, itsympair.first);
+			auto posB = GetVertexIndexinSeq(posPair, itsympair.second);
+			auto negA = GetVertexIndexinSeq(negPair, itsympair.first);
+			auto negB = GetVertexIndexinSeq(negPair, itsympair.second);
+			if (sb.axis_dir == placerDB::V) {
+				if ((posA < posB && negA > negB) || (posA > posB && negA < negB)) {
+					logger->debug("failing sym pair ({0},{1}) ({2},{3})", itsympair.first, itsympair.second, des.Blocks[itsympair.first][0].name, des.Blocks[itsympair.second][0].name);
+					this->PrintSeqPair();
+					return SPConstrCheck::SYM_PAIR_FAIL;
+				}
+			} else {
+				if ((posA < posB && negA < negB) || (posA > posB && negA > negB)) {
+					logger->debug("failing sym pair ({0},{1}) ({2},{3})", itsympair.first, itsympair.second, des.Blocks[itsympair.first][0].name, des.Blocks[itsympair.second][0].name);
+					this->PrintSeqPair();
+					return SPConstrCheck::SYM_PAIR_FAIL;
+				}
+			}
+		}
+	}
+	return SPConstrCheck::VALID;
+}
+
 void SeqPair::PerturbationNew(design& caseNL) {
 
   /* initialize random seed: */
@@ -1109,6 +1156,8 @@ void SeqPair::PerturbationNew(design& caseNL) {
   SeqPair cpsp(*this);
   int trial_cnt{0};
   const int max_trial_cnt{20};
+  bool loop{false};
+  SPConstrCheck constr_fail{SPConstrCheck::VALID};
   do {
 	  if (_seqPairEnum) {
 		  posPair = _seqPairEnum->PosPair();
@@ -1134,8 +1183,7 @@ void SeqPair::PerturbationNew(design& caseNL) {
 		  if(caseNL.noSymGroup4PartMove>0) {pool.insert(5); pool.insert(8); } 
 		  if(caseNL.noSymGroup4FullMove>1) {pool.insert(6);}
 		  int fail = 0;
-		  int count = 20;
-		  while(!mark && fail<count) {
+		  while(!mark && fail < max_trial_cnt) {
 			  //std::cout<<int(pool.size())<<std::endl;
 			  int choice=rand() % int(pool.size());
 			  std::set<int>::iterator cit=pool.begin(); std::advance(cit, choice);
@@ -1157,9 +1205,11 @@ void SeqPair::PerturbationNew(design& caseNL) {
 	  }
 	  KeepOrdering(caseNL);
 	  SameSelected(caseNL);
-  } while (cpsp == *this && trial_cnt++ < max_trial_cnt);
-
-
+	  constr_fail = AlignOrderSymValid(caseNL);
+  } while ((cpsp == *this || constr_fail != SPConstrCheck::VALID) && trial_cnt++ < max_trial_cnt);
+  if (constr_fail == SPConstrCheck::SYM_PAIR_FAIL) {
+	  ++caseNL._infeasSymPair;
+  }
 }
 
 void SeqPair::TestSwap() {
@@ -1413,7 +1463,41 @@ bool SeqPair::MoveAsymmetricBlockdoublePair(design& caseNL) {
   return mark;
 }
 
-std::pair<int, int> SeqPair::GetOrderValidRange(const design& des, bool pos, int anode)
+bool SeqPair::MoveAsymmetricBlockUnit(design& caseNL, bool pos, int anode) {
+  /* initialize random seed: */
+  //srand(time(NULL));
+  auto& seq = pos ? posPair : negPair;
+  vector<int> newseq;
+  newseq.resize(seq.size());
+  int oldpos=GetVertexIndexinSeq(seq, anode); // position of anode in original seqence
+  int newpos=rand() % (int)seq.size();
+  while(oldpos==newpos) {
+	newpos=rand() % (int)seq.size();
+  } // randomly choose a new position
+  //cout<<"Aymnode-"<<anode<<" oldpos-"<<oldpos<<" newpos-"<<newpos<<endl;
+
+  if(oldpos<newpos) {
+    for(int i=0;i<oldpos;++i) 
+      newseq.at(i)=seq.at(i);
+    for(int i=oldpos+1;i<=newpos;++i) 
+      newseq.at(i-1)=seq.at(i);
+    for(int i=newpos+1;i<(int)seq.size();++i)
+      newseq.at(i)=seq.at(i);
+    newseq.at(newpos)=seq.at(oldpos);
+  } else if (oldpos>newpos) {
+    for(int i=0;i<newpos;++i)
+      newseq.at(i)=seq.at(i);
+    newseq.at(newpos)=seq.at(oldpos);
+    for(int i=newpos+1;i<=oldpos;++i)
+      newseq.at(i)=seq.at(i-1);
+    for(int i=oldpos+1;i<(int)seq.size();++i)
+      newseq.at(i)=seq.at(i);
+  }
+  seq=newseq;
+  return true;
+}
+
+std::pair<int, int> SeqPair::GetOrderValidRange(const design& des, bool pos, int anode) const
 {
   const auto& seq = pos ? posPair : negPair;
   const int ind_max = seq.size() - 1;
@@ -1425,7 +1509,7 @@ std::pair<int, int> SeqPair::GetOrderValidRange(const design& des, bool pos, int
         if (pos) {
           range.second = std::min(range.second, std::max(bindex - 1, 0));
         } else {
-          range.first = std::max(range.first, std::min(bindex + 1, ind_max));
+          range.first  = std::max(range.first, std::min(bindex + 1, ind_max));
         }
       } else { // horizontal
         range.second = std::min(range.second, std::max(bindex - 1, 0));
@@ -1434,7 +1518,7 @@ std::pair<int, int> SeqPair::GetOrderValidRange(const design& des, bool pos, int
       const int bindex = std::find(seq.begin(), seq.end(), it.first.first)- seq.begin();
       if (it.second == placerDB::V) { // vertical
         if (pos) {
-          range.first = std::max(range.first, std::min(bindex + 1, ind_max));
+          range.first  = std::max(range.first, std::min(bindex + 1, ind_max));
         } else {
           range.second = std::min(range.second, std::max(bindex - 1, 0));
         }
@@ -1447,7 +1531,7 @@ std::pair<int, int> SeqPair::GetOrderValidRange(const design& des, bool pos, int
   return range;
 }
 
-std::pair<int, int> SeqPair::GetAlignValidRange(const design& des, bool pos, int anode)
+std::pair<int, int> SeqPair::GetAlignValidRange(const design& des, bool pos, int anode) const
 {
   const auto& seq = pos ? posPair : negPair;
   const auto& othseq = pos ? negPair : posPair;
@@ -1491,53 +1575,11 @@ std::pair<int, int> SeqPair::GetAlignValidRange(const design& des, bool pos, int
   return range;
 }
 
-std::pair<int, int> SeqPair::GetValidRange(const design& des, bool pos, int anode)
+std::pair<int, int> SeqPair::GetValidRange(const design& des, bool pos, int anode) const
 {
   auto p1 = GetOrderValidRange(des, pos, anode);
   auto p2 = GetAlignValidRange(des, pos, anode);
   return std::make_pair(std::max(p1.first, p2.first), std::min(p1.second, p2.second));
-}
-
-bool SeqPair::MoveAsymmetricBlockUnit(design& caseNL, bool pos, int anode) {
-  /* initialize random seed: */
-  //srand(time(NULL));
-  auto& seq = pos ? posPair : negPair;
-  vector<int> newseq;
-  newseq.resize(seq.size());
-  auto range = GetValidRange(caseNL, pos, anode);
-  if (range.first > range.second) return false;
-  const int delN = range.second - range.first + 1;
-  int oldpos=GetVertexIndexinSeq(seq, anode); // position of anode in original seqence
-  int newpos{oldpos};
-  if (range.first == range.second && oldpos != range.first) {
-    newpos = range.first;
-  } else {
-    newpos = range.first + (rand() % delN);
-  }
-  while(oldpos==newpos) {
-	newpos = range.first + (rand() % delN);
-  } // randomly choose a new position
-  //cout<<"Aymnode-"<<anode<<" oldpos-"<<oldpos<<" newpos-"<<newpos<<endl;
-
-  if(oldpos<newpos) {
-    for(int i=0;i<oldpos;++i) 
-      newseq.at(i)=seq.at(i);
-    for(int i=oldpos+1;i<=newpos;++i) 
-      newseq.at(i-1)=seq.at(i);
-    for(int i=newpos+1;i<(int)seq.size();++i)
-      newseq.at(i)=seq.at(i);
-    newseq.at(newpos)=seq.at(oldpos);
-  } else if (oldpos>newpos) {
-    for(int i=0;i<newpos;++i)
-      newseq.at(i)=seq.at(i);
-    newseq.at(newpos)=seq.at(oldpos);
-    for(int i=newpos+1;i<=oldpos;++i)
-      newseq.at(i)=seq.at(i-1);
-    for(int i=oldpos+1;i<(int)seq.size();++i)
-      newseq.at(i)=seq.at(i);
-  }
-  seq=newseq;
-  return true;
 }
 
 bool SeqPair::ChangeAsymmetricBlockOrient(design& caseNL) {
