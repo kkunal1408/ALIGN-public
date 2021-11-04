@@ -1173,7 +1173,7 @@ std::string SeqPair::getLexIndex(design& des) const {
 bool SeqPair::CheckSymm(design& caseNL) {
   auto logger = spdlog::default_logger()->clone("placer.SeqPair.CheckSymm");
   std::map<int, int> posPosition, negPosition;
-  for (int i = 0; i < ((int)posPair.size()); ++i) {
+  for (unsigned i = 0; i < posPair.size(); ++i) {
     posPosition[posPair[i]] = i;
     negPosition[negPair[i]] = i;
   }
@@ -1181,10 +1181,10 @@ bool SeqPair::CheckSymm(design& caseNL) {
 
     // self symm blocks should be (above/below for vertical axis) or (left/right for horizontal axis)
     // self symm blocks to the (left/right for vertical axis) or (above/below) for horizontal) is a violation
-    for (int i = 0; i < ((int)sb.selfsym.size()) - 1; ++i) {
-      auto posA = posPosition[sb.selfsym[i].first];
-      auto negA = negPosition[sb.selfsym[i].first];
-      for (int j = i + 1; j < ((int)sb.selfsym.size()); ++j) {
+    for (unsigned i = 1; i < sb.selfsym.size(); ++i) {
+      auto posA = posPosition[sb.selfsym[i-1].first];
+      auto negA = negPosition[sb.selfsym[i-1].first];
+      for (unsigned j = i; j < sb.selfsym.size(); ++j) {
         auto posB = posPosition[sb.selfsym[j].first];
         auto negB = negPosition[sb.selfsym[j].first];
         if (sb.axis_dir == placerDB::V) {
@@ -1198,7 +1198,7 @@ bool SeqPair::CheckSymm(design& caseNL) {
         }
       }
     }
-    for (int i = 0; i < ((int)sb.sympair.size()); ++i) {
+    for (unsigned i = 0; i < sb.sympair.size(); ++i) {
       const auto& sympairi = sb.sympair[i];
       auto posA = posPosition[sympairi.first];
       auto negA = negPosition[sympairi.first];
@@ -1221,7 +1221,7 @@ bool SeqPair::CheckSymm(design& caseNL) {
               return false;
           }
         }
-        for (int j = i+1; j < ((int)sb.sympair.size()); ++j) {
+        for (unsigned j = i+1; j < sb.sympair.size(); ++j) {
           const auto& sympairj = sb.sympair[j];
           auto posC = posPosition[sympairj.first];
           auto negC = negPosition[sympairj.first];
@@ -1266,7 +1266,7 @@ bool SeqPair::CheckSymm(design& caseNL) {
             return false;
           }
         }
-        for (int j = i+1; j < ((int)sb.sympair.size()); ++j) {
+        for (unsigned j = i+1; j < sb.sympair.size(); ++j) {
           const auto& sympairj = sb.sympair[j];
           auto posC = posPosition[sympairj.first];
           auto negC = negPosition[sympairj.first];
@@ -1357,7 +1357,7 @@ bool SeqPair::CheckSymm(design& caseNL) {
     if (it >= caseNL.Blocks.size()) continue;
     auto posA = posPosition[it];
     auto negA = negPosition[it];
-    for (int i = 0; i < posA; ++i) {
+    for (unsigned i = 0; i < posA; ++i) {
       const auto& bi = posPair[i];
       if (bi < caseNL.Blocks.size()) {
         auto negB = negPosition[bi];
@@ -1378,7 +1378,7 @@ bool SeqPair::CheckSymm(design& caseNL) {
         }
       }
     }
-    for (int i = posA + 1; i < ((int)posPair.size()); ++i) {
+    for (unsigned i = posA + 1; i < posPair.size(); ++i) {
       const auto& bi = posPair[i];
       if (bi < caseNL.Blocks.size()) {
         if (negPosition[bi] < negA) {
@@ -1431,11 +1431,11 @@ bool SeqPair::CheckSymm(design& caseNL) {
       for (const auto& au : caseNL.Align_blocks) {
         if (au.line == 0) {
           if ((horiz && au.horizon == 1) || (!horiz && au.horizon == 0)) {
-            for (int i = 0; i < ((int)au.blocks.size()) - 1; ++i) {
-              const int& ai = au.blocks[i];
+            for (unsigned i = 1; i < au.blocks.size(); ++i) {
+              const int& ai = au.blocks[i-1];
               const auto& arai = arSet[ai];
               const auto& blai = blSet[ai];
-              for (int j = i + 1; j < ((int)au.blocks.size()); ++j) {
+              for (unsigned j = i + 1; j < au.blocks.size(); ++j) {
                 const int& bj = au.blocks[j];
                 const auto& arbj = arSet[bj];
                 const auto& blbj = blSet[bj];
@@ -1482,12 +1482,12 @@ bool SeqPair::CheckSymm(design& caseNL) {
 
 bool SeqPair::CheckAlign(design& caseNL) {
   for(auto align:caseNL.Align_blocks){
-    for (int i = 0; i < ((int)align.blocks.size()) - 1; ++i) {
-      for (int j = i + 1; j < ((int)align.blocks.size()); ++j) {
+    for (unsigned i = 1; i < align.blocks.size(); ++i) {
+      for (unsigned j = i; j < align.blocks.size(); ++j) {
         int first_it_pos, second_it_pos, first_it_neg, second_it_neg;
-        first_it_pos = find(posPair.begin(), posPair.end(), align.blocks[i]) - posPair.begin();
+        first_it_pos = find(posPair.begin(), posPair.end(), align.blocks[i-1]) - posPair.begin();
         second_it_pos = find(posPair.begin(), posPair.end(), align.blocks[j]) - posPair.begin();
-        first_it_neg = find(negPair.begin(), negPair.end(), align.blocks[i]) - negPair.begin();
+        first_it_neg = find(negPair.begin(), negPair.end(), align.blocks[i-1]) - negPair.begin();
         second_it_neg = find(negPair.begin(), negPair.end(), align.blocks[j]) - negPair.begin();
         if(first_it_pos>second_it_pos){
           swap(first_it_pos, second_it_pos);
@@ -1522,10 +1522,10 @@ bool SeqPair::CheckAlign(design& caseNL) {
                 }
               }
               for(auto otheralign:caseNL.Align_blocks){
-                for (int i = 0; i < ((int)otheralign.blocks.size()) - 1; ++i) {
-                  for (int j = i + 1; j < ((int)otheralign.blocks.size()); ++j) {
+                for (unsigned k = 1; k < otheralign.blocks.size(); ++k) {
+                  for (unsigned l = k; l < otheralign.blocks.size(); ++l) {
                     if(otheralign.horizon){
-                      if (a == otheralign.blocks[i] && b == otheralign.blocks[j] || a == otheralign.blocks[j] && b == otheralign.blocks[i]) return false;
+                      if (a == otheralign.blocks[k-1] && b == otheralign.blocks[l] || a == otheralign.blocks[l] && b == otheralign.blocks[k-1]) return false;
                       // check other align pairs
                     }
                   }
@@ -1551,10 +1551,10 @@ bool SeqPair::CheckAlign(design& caseNL) {
                 }
               }
               for(auto otheralign:caseNL.Align_blocks){
-                for (int i = 0; i < ((int)otheralign.blocks.size()) - 1; ++i) {
-                  for (int j = i + 1; j < ((int)otheralign.blocks.size()); ++j) {
+                for (unsigned k = 1; k < otheralign.blocks.size() ; ++k) {
+                  for (unsigned l = k; l < otheralign.blocks.size(); ++l) {
                     if(!otheralign.horizon){
-                      if (a == otheralign.blocks[i] && b == otheralign.blocks[j] || a == otheralign.blocks[j] && b == otheralign.blocks[i]) return false;
+                      if (a == otheralign.blocks[k-1] && b == otheralign.blocks[l] || a == otheralign.blocks[l] && b == otheralign.blocks[k-1]) return false;
                       // check other align pairs
                     }
                   }
